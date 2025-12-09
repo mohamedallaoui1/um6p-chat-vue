@@ -145,8 +145,9 @@ const handleNewChat = () => {
 <template>
   <div class="chat-window flex flex-col w-full h-full bg-white overflow-hidden cursor-default" @click.stop>
     
-    <!-- Global Collapse Button -->
+    <!-- Global Collapse Button (Landing View Only) -->
     <button 
+        v-if="!isChatting"
         @click="handleClose" 
         class="absolute top-2 right-2 md:top-4 md:left-4 z-50 p-2 md:p-2 bg-gray-800/80 text-white hover:bg-gray-800 rounded-full transition-colors focus:outline-none cursor-pointer shadow-lg"  
         aria-label="Collapse chat"
