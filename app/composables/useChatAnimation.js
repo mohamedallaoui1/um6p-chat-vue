@@ -14,7 +14,7 @@ export const useChatAnimation = () => {
             return {
                 x: 0,
                 width: '100vw',
-                height: '100vh',
+                height: '100dvh', // Use dynamic viewport height for mobile
                 bottom: 0,
                 right: 0,
                 borderTopRightRadius: '0px',

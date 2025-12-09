@@ -88,7 +88,7 @@ onUnmounted(() => {
 <template>
   <div class="flex-1 flex flex-col bg-gray-50 overflow-hidden">
     <!-- Header -->
-    <div class="flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100 shadow-sm shrink-0">
+    <div class="relative z-10 flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100 shadow-sm shrink-0">
       <button 
           @click="$emit('close')" 
           class="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors focus:outline-none cursor-pointer"

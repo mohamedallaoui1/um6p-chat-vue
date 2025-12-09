@@ -241,6 +241,13 @@ const handleNewChat = () => {
   box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
 }
 
+/* Remove border-radius on mobile to prevent header clipping */
+@media (max-width: 767px) {
+  .chat-window {
+    border-radius: 0;
+  }
+}
+
 /* Custom Scrollbar */
 .overflow-y-auto::-webkit-scrollbar {
   width: 6px;
