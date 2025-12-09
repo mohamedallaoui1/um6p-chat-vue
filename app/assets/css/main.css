@@ -1,0 +1,6 @@
+@import "tailwindcss";
+
+/* Prevent horizontal scrollbars during animations */
+html, body {
+    overflow-x: hidden;
+}
