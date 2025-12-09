@@ -91,10 +91,10 @@ onUnmounted(() => {
     <div class="relative z-10 flex items-center justify-between px-4 py-2 bg-white border-b border-gray-100 shadow-sm shrink-0">
       <button 
           @click="$emit('close')" 
-          class="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors focus:outline-none cursor-pointer"
+          class="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300 cursor-pointer"
           aria-label="Collapse chat"
       >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
       </button>

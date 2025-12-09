@@ -149,10 +149,10 @@ const handleNewChat = () => {
     <button 
         v-if="!isChatting"
         @click="handleClose" 
-        class="absolute top-2 right-2 md:top-4 md:left-4 z-50 p-2 md:p-2 bg-gray-800/80 text-white hover:bg-gray-800 rounded-full transition-colors focus:outline-none cursor-pointer shadow-lg"  
+        class="absolute top-3 right-3 md:top-4 md:right-4 z-50 p-2.5 bg-gray-800/90 text-white hover:bg-gray-900 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-white/50 cursor-pointer shadow-lg hover:scale-110"  
         aria-label="Collapse chat"
     >
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="6 9 12 15 18 9"></polyline>
         </svg>
     </button>
