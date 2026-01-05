@@ -1,113 +1,48 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import ThreeScene from './ThreeScene.vue';
 import MessageWindow from './MessageWindow.vue';
+import NetworkError from './NetworkError.vue';
 import CleverlyticsLogo from '@/assets/logo/CleverlyticsLogoWhite.png';
+import { useChatApi } from '@/composables/useChatApi';
+import { APP_CONSTANTS } from '@/utils/constants';
 
 const emit = defineEmits(['close']);
 
 const isChatting = ref(false);
 const inputValue = ref('');
-const messages = ref([]);
+// Destructure and use the composable state/refs directly
+// This ensures reactivity is maintained
+const { 
+    isLoading, 
+    isNetworkError, 
+    messages, 
+    initConversation, 
+    sendMessage, 
+    resetChat 
+} = useChatApi();
 
-const THEME_COLOR = '#e3572a';
-
-const suggestions = [
-  "What academic programs does UM6P offer?",
-  "How can I apply to UM6P?",
-  "What research opportunities are available?"
-];
+const suggestions = APP_CONSTANTS.MESSAGES.SUGGESTIONS;
 
 const handleClose = () => {
   emit('close');
 };
 
-const isLoading = ref(false);
-const conversationId = ref(null);
-
-const initConversation = async () => {
-  try {
-    const response = await fetch('https://um6p.cleverlytics.com/api/conversation/initialize', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    });
-    const data = await response.json();
-    if (data.status === 'success') {
-      conversationId.value = data.conversation_id;
-    }
-  } catch (error) {
-    console.error('Failed to initialize conversation:', error);
-  }
+const handleRetry = () => {
+    isNetworkError.value = false;
+    initConversation();
 };
 
 // Initialize on mount
-import { onMounted } from 'vue';
 onMounted(() => {
   initConversation();
 });
 
-const startChat = async (message) => {
-  if (!message.trim()) return;
-  
-  isChatting.value = true;
-  messages.value.push({
-    id: Date.now(),
-    text: message,
-    isUser: true,
-    skipAnimation: true
-  });
-  
-  inputValue.value = '';
-  isLoading.value = true;
-
-  try {
-    // Ensure conversation is initialized
-    if (!conversationId.value) {
-        await initConversation();
-    }
-
-    const response = await fetch('https://um6p.cleverlytics.com/api/query', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        query: message,
-        conversation_id: conversationId.value
-      })
-    });
-    
-    const data = await response.json();
-    
-    // Set typing to true immediately to prevent input gap
-    isTyping.value = true;
-    isLoading.value = false;
-    
-    if (data.status === 'success') {
-        messages.value.push({
-          id: Date.now() + 1,
-          text: data.response,
-          isUser: false,
-          skipAnimation: false
-        });
-    } else {
-        // Handle error gracefully
-        messages.value.push({
-          id: Date.now() + 1,
-          text: "Sorry, I encountered an error processing your request.",
-          isUser: false,
-          skipAnimation: true
-        });
-    }
-  } catch (error) {
-    console.error('Chat error:', error);
-    isLoading.value = false;
-    messages.value.push({
-      id: Date.now() + 1,
-      text: "Sorry, I'm having trouble connecting to the server.",
-      isUser: false,
-      skipAnimation: true
-    });
-  }
+const startChat = (message) => {
+    if (!message.trim()) return;
+    isChatting.value = true;
+    inputValue.value = '';
+    sendMessage(message);
 };
 
 const handleSuggestionClick = (suggestion) => {
@@ -115,7 +50,7 @@ const handleSuggestionClick = (suggestion) => {
 };
 
 const handleSubmit = () => {
-  startChat(inputValue.value);
+    startChat(inputValue.value);
 };
 
 const isTyping = ref(false);
@@ -133,12 +68,9 @@ const handleMessageComplete = (messageId) => {
 
 const handleNewChat = () => {
   isChatting.value = false;
-  messages.value = [];
   inputValue.value = '';
-  isLoading.value = false;
   isTyping.value = false;
-  // Re-initialize conversation for a fresh context
-  initConversation();
+  resetChat();
 };
 </script>
 
@@ -158,7 +90,8 @@ const handleNewChat = () => {
     </button>
 
     <!-- Landing View -->
-    <div v-if="!isChatting" class="flex-1 flex flex-col overflow-y-auto bg-white no-scrollbar">
+    <NetworkError v-if="isNetworkError" @retry="handleRetry" />
+    <div v-else-if="!isChatting" class="flex-1 flex flex-col overflow-y-auto bg-white no-scrollbar">
       <!-- Hero Section (3D Scene) -->
       <div class="h-[45%] md:h-[55%] relative flex items-center justify-center overflow-hidden shrink-0 shadow-sm transition-all duration-300">
         <div class="absolute inset-0">
@@ -176,7 +109,7 @@ const handleNewChat = () => {
             :key="suggestion"
             @click="handleSuggestionClick(suggestion)"
             class="w-full text-left px-5 py-3 md:py-2 rounded-xl text-white text-sm md:text-xs font-medium flex items-center justify-between transition-transform hover:scale-[1.02] active:scale-[0.98] shadow-sm cursor-pointer"
-            :style="{ backgroundColor: THEME_COLOR }"
+            :style="{ backgroundColor: APP_CONSTANTS.THEME.PRIMARY_COLOR }"
           >
             {{ suggestion }}
             <svg class="w-4 h-4 text-white/80" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -196,7 +129,7 @@ const handleNewChat = () => {
       v-else 
       :messages="messages" 
       :is-loading="isLoading"
-      :theme-color="THEME_COLOR" 
+      :theme-color="APP_CONSTANTS.THEME.PRIMARY_COLOR" 
       @close="handleClose" 
       @new-chat="handleNewChat" 
       @typing="handleTyping"
@@ -204,7 +137,7 @@ const handleNewChat = () => {
     />
 
     <!-- Input Area & Footer -->
-    <div class="p-2 rounded-t-lg" :style="{ backgroundColor: THEME_COLOR }">
+    <div class="p-2 rounded-t-lg" :style="{ backgroundColor: APP_CONSTANTS.THEME.PRIMARY_COLOR }">
       <div class="flex items-center gap-1 mb-1">
         <input 
           v-model="inputValue"

@@ -1,10 +1,10 @@
 <template>
   <div class="scene-container">
-    <div v-if="isLoading" ref="loadingOverlayRef" class="loading-overlay">
-      <div class="loader">
-        <div class="bar" :style="{ width: progress + '%' }"></div>
+    <div v-if="isLoading" ref="loadingOverlayRef" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/95 backdrop-blur-sm transition-opacity duration-1000">
+      <div class="w-48 h-[2px] bg-gray-200 rounded-full overflow-hidden mb-4">
+        <div class="h-full transition-all duration-200 ease-out" :style="{ width: progress + '%', backgroundColor: APP_CONSTANTS.THEME.PRIMARY_COLOR }"></div>
       </div>
-      <div class="loading-text">Loading UM6P Campus... {{ Math.round(progress) }}%</div>
+      <div class="text-[#E3572A] text-[10px] font-medium tracking-[0.2em] uppercase" :style="{ color: APP_CONSTANTS.THEME.PRIMARY_COLOR }">Loading Campus...</div>
     </div>
     <canvas ref="canvasRef" class="webgl"></canvas>
   </div>
@@ -19,6 +19,8 @@ import { OutlineEffect } from 'three/examples/jsm/effects/OutlineEffect.js'
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
 import { onMounted, onBeforeUnmount, ref } from 'vue'
+import { useThreeAssets } from '@/composables/useThreeAssets'
+import { APP_CONSTANTS } from '@/utils/constants'
 
 const canvasRef = ref(null)
 const loadingOverlayRef = ref(null)
@@ -28,7 +30,9 @@ let animationId = null
 
 // Loading State
 const isLoading = ref(true)
-const progress = ref(0)
+const progress = ref(0) // Still need this to update the UI bar
+
+const { createLoadingManager, setupLights, createParticles, setupAnimatedText } = useThreeAssets()
 
 onMounted(() => {
     if (!canvasRef.value) return
@@ -36,7 +40,7 @@ onMounted(() => {
     // -------------------------------------------------
     // LOADING MANAGER
     // -------------------------------------------------
-    const loadingManager = new THREE.LoadingManager(
+    const loadingManager = createLoadingManager(
         // onLoad
         () => {
             console.log('Assets loaded')
@@ -62,10 +66,8 @@ onMounted(() => {
     const canvas = canvasRef.value
     const scene = new THREE.Scene()
     const textScene = new THREE.Scene()
-
-    // -------------------------------------------------
-    // PARTICLES & ENV
-    // -------------------------------------------------
+    
+    // Setup Environment
     const gradientMap = new THREE.DataTexture(
         new Uint8Array([0, 128, 255]),
         3, 1,
@@ -75,53 +77,18 @@ onMounted(() => {
     gradientMap.magFilter = THREE.NearestFilter
     gradientMap.needsUpdate = true
 
-    const particlesCount = 80
-    const positions = new Float32Array(particlesCount * 3)
-    for (let i = 0; i < particlesCount; i++) {
-        positions[i * 3]     = (Math.random() - 0.5) * 10
-        positions[i * 3 + 1] = (Math.random() - 0.5) * 10
-        positions[i * 3 + 2] = (Math.random() - 0.5) * 10
-    }
-
-    const particlesGeometry = new THREE.BufferGeometry()
-    particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
-
-    const createSquareTexture = () => {
-        const canvas = document.createElement('canvas')
-        canvas.width = 64
-        canvas.height = 64
-        const ctx = canvas.getContext('2d')
-        ctx.fillStyle = '#ff6600'
-        ctx.fillRect(0, 0, 64, 64)
-        const texture = new THREE.CanvasTexture(canvas)
-        texture.magFilter = THREE.NearestFilter
-        return texture
-    }
-
-    const particlesMaterial = new THREE.PointsMaterial({
-        color: '#ffeded',
-        size: 0.3,
-        sizeAttenuation: true,
-        map: createSquareTexture(),
-        transparent: true,
-        alphaTest: 0.1,
-        depthWrite: false
-    })
-
-    const particles = new THREE.Points(particlesGeometry, particlesMaterial)
-    particles.position.set(-3.5, 0, 0)
-    scene.add(particles)
+    // Create Assets using Composable
+    const particles = createParticles(scene)
+    setupLights(scene)
 
     // -------------------------------------------------
     // YELLOW PLANE
     // -------------------------------------------------
-
     const textureLoader = new THREE.TextureLoader()
-
     const texture = textureLoader.load('/models/mask.webp')
     const planeGeometry = new THREE.PlaneGeometry(20, 20)
     const planeMaterial = new THREE.MeshBasicMaterial({ 
-        color: '#DAA06D',
+        color: APP_CONSTANTS.THREE.COLORS.PLANE_COLOR,
         side: THREE.DoubleSide,
         alphaMap: texture,
         transparent: true,
@@ -177,7 +144,6 @@ onMounted(() => {
     // -------------------------------------------------
     const fontloader = new FontLoader(loadingManager)
     fontloader.load('/fonts/helvetiker_bold.typeface.json', (font) => {
-        
         // 1. STATIC HEADER TEXT
         const headerGeometry = new TextGeometry(
             'UM6P AI ASSISTANT\n    ASK ME ABOUT',
@@ -189,7 +155,7 @@ onMounted(() => {
             }
         )
         const headerMaterial = new THREE.MeshBasicMaterial({
-            color: '#ffffff',
+            color: APP_CONSTANTS.THREE.COLORS.TEXT_WHITE,
             side: THREE.DoubleSide,
         })
         headerGeometry.center()
@@ -201,129 +167,9 @@ onMounted(() => {
         headerText.position.set(0.5, 0, 0)
         textScene.add(headerText)
 
-        // -------------------------------------------------
-        // 2. ROTATING "SPINNER" TEXT (FIXED POSITION)
-        // -------------------------------------------------
-        const animatedWords = ['UM6P', '1337', 'EMINES', 'ABS', 'FGSES', 'SHBM', 'FMS', 'SAP+D', 'GTI']
-        let wordIndex = 0
-        let currentWordMesh = null
-        
-        // Optimization: Pre-generate geometries to avoid runtime overhead
-        const wordGeometries = {}
-        const textOptions = {
-            font: font,
-            size: 0.15,
-            depth: 0.01,
-            curveSegments: 12,
-            bevelEnabled: true,
-            bevelThickness: 0.005,
-            bevelSize: 0.002,
-            bevelSegments: 4
-        }
-        
-        animatedWords.forEach(word => {
-            const geo = new TextGeometry(word, textOptions)
-            geo.center()
-            wordGeometries[word] = geo
-        })
-
-        // Helper to create a word mesh wrapped in a Group
-        const createWordMesh = (word, opacity = 1) => {
-             const geometry = wordGeometries[word]
-             
-             const material = new THREE.MeshBasicMaterial({ 
-                 color: '#ffffff', 
-                 side: THREE.DoubleSide,
-                 transparent: true,
-                 opacity: opacity,
-                 depthWrite: false
-             })
-             const mesh = new THREE.Mesh(geometry, material)
-             mesh.userData.outlineParameters = { visible: false }
-             
-             // Mesh faces camera (Local Y rotation)
-             mesh.rotation.y = Math.PI * 0.5 
-             
-             // Group handles position and Z-rotation
-             const group = new THREE.Group()
-             group.add(mesh)
-             group.position.set(0.5, -0.28, 0)
-             
-             return group
-         }
-
-        // Initialize First Word
-        currentWordMesh = createWordMesh(animatedWords[0], 1)
-        textScene.add(currentWordMesh)
-
-        // Animation Loop
-        const animateText = () => {
-            const nextIndex = (wordIndex + 1) % animatedWords.length
-            const nextWordGroup = createWordMesh(animatedWords[nextIndex], 0) // Start invisible
-            
-            // SETUP STARTING ROTATION (Z-Axis)
-            // Start from -90 degrees (flipped down)
-            nextWordGroup.rotation.z = -Math.PI * 0.5
-            
-            textScene.add(nextWordGroup)
-
-            const tl = gsap.timeline({
-                delay: 1.5,
-                onComplete: () => {
-                    textScene.remove(currentWordMesh)
-                    // Only dispose material, keep geometry cached
-                    currentWordMesh.children[0].material.dispose()
-                    
-                    currentWordMesh = nextWordGroup
-                    wordIndex = nextIndex
-                    
-                    animateText()
-                }
-            })
-
-            // 1. OUTGOING WORD (Flip Up: 0 -> 90)
-            tl.to(currentWordMesh.rotation, {
-                duration: 1,
-                z: Math.PI * 0.5, 
-                ease: "power2.in"
-            }, 0)
-
-            tl.to(currentWordMesh.children[0].material, {
-                duration: 0.5,
-                opacity: 0,
-                ease: "power1.in"
-            }, 0)
-
-            // 2. INCOMING WORD (Flip Up: -90 -> 0)
-            tl.to(nextWordGroup.rotation, {
-                duration: 1,
-                z: 0,
-                ease: "power2.out"
-            }, 0.2)
-
-            tl.to(nextWordGroup.children[0].material, {
-                duration: 0.8,
-                opacity: 1,
-                ease: "power1.out"
-            }, 0.2)
-        }
-
-        animateText()
+        // 2. ANIMATED TEXT via Composable
+        setupAnimatedText(font, textScene)
     })
-
-    // -------------------------------------------------
-    // LIGHTS & CAMERA
-    // -------------------------------------------------
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1)
-    scene.add(ambientLight)
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5)
-    directionalLight.position.set(5, 10, 7)
-    scene.add(directionalLight)
-
-    const spotLight = new THREE.SpotLight(0xffa95c, 2)
-    spotLight.position.set(-5, 10, -5)
-    scene.add(spotLight)
 
     const sizes = {
         width: window.innerWidth,
@@ -364,8 +210,6 @@ onMounted(() => {
             cursor.y = y / sizes.height - 0.5
         }, { passive: false })
     }
-
-
 
     renderer = new THREE.WebGLRenderer({
         canvas: canvas,
@@ -412,8 +256,6 @@ onMounted(() => {
             handleResize(entry.contentRect.width, entry.contentRect.height)
         }
     })
-    
-
     
     if (canvasRef.value && canvasRef.value.parentElement) {
         resizeObserver.observe(canvasRef.value.parentElement)
@@ -467,7 +309,10 @@ onMounted(() => {
         
         // Dispose of specific textures
         gradientMap.dispose()
-        particlesMaterial.map?.dispose()
+        particles.material.map?.dispose()
+        particles.material.dispose()
+        particles.geometry.dispose()
+
         planeMaterial.alphaMap?.dispose()
         
         // Traverse and dispose
@@ -520,42 +365,5 @@ onMounted(() => {
   z-index: 0;
 }
 
-.loading-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: #1a1a1a;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 10;
-    transition: opacity 1s ease-out;
-}
 
-.loader {
-    width: 50%; /* Responsive width */
-    max-width: 200px;
-    height: 4px;
-    background: #333;
-    border-radius: 2px;
-    margin-bottom: 20px;
-    overflow: hidden;
-}
-
-.bar {
-    height: 100%;
-    background: #ff6600;
-    transition: width 0.2s ease-out;
-}
-
-.loading-text {
-    color: #ff6600;
-    font-family: 'Helvetica', sans-serif;
-    font-size: 12px; /* Smaller font for small containers */
-    letter-spacing: 2px;
-    text-align: center;
-}
 </style>

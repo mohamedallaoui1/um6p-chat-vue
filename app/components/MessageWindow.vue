@@ -94,19 +94,22 @@ onUnmounted(() => {
           class="p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 rounded-full transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-300 cursor-pointer"
           aria-label="Collapse chat"
       >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" :stroke="themeColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="6 9 12 15 18 9"></polyline>
           </svg>
       </button>
       
-      <h2 class="text-sm font-semibold text-gray-800">AI Assistant</h2>
+      <div class="flex items-center gap-1">
+          <div class="flex items-center justify-center w-7 h-7 text-white text-[13px] font-bold shadow-sm" :style="{ backgroundColor: themeColor }">A</div>
+          <div class="flex items-center justify-center w-7 h-7 text-white text-[13px] font-bold shadow-sm" :style="{ backgroundColor: themeColor }">I</div>
+      </div>
       
       <button 
           @click="$emit('newChat')" 
           class="p-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors focus:outline-none cursor-pointer"
           aria-label="New chat"
       >
-          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" :stroke="themeColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
           </svg>
@@ -177,9 +180,9 @@ onUnmounted(() => {
 
 <style scoped>
 .shiny-text {
-  background: linear-gradient(90deg, #E3572A 0%, #ffb088 50%, #E3572A 100%);
+  background: linear-gradient(90deg, v-bind(themeColor) 0%, #ffb088 50%, v-bind(themeColor) 100%);
   background-size: 200% auto;
-  color: #E3572A;
+  color: v-bind(themeColor);
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
